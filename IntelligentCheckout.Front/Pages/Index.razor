@@ -1,0 +1,99 @@
+﻿@page "/"
+@inject HttpClient HttpClient
+@inject CartService CartService
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration 
+
+<h3>Principais produtos</h3>
+@if (Produtos == null)
+{
+    <div class="row">
+        <div class="col-sm-12">
+            <center>Carregando...</center>
+        </div>
+    </div>
+}
+else
+{
+    <div class="row mt-4">
+        @foreach (var prod in Produtos)
+        {
+            <div class="col-sm col-md-2 col-lg-3 mb-4">
+                <CartProduct  Produto="@prod" OnClick="@DetalharProduto"></CartProduct>
+            </div>
+        }
+    </div>
+
+}
+
+
+
+<BSModal href="DetalheProduto" IsCentered="true">
+    <BlazorStrap.BSModalHeader OnClick="@FecharModal">@Detalhe.Nome</BlazorStrap.BSModalHeader>
+    <BlazorStrap.BSModalBody>
+        <img src="@Detalhe.Fotos.FirstOrDefault()" style="width: 100%" />
+        <p>@Detalhe.Descricao</p>
+    </BlazorStrap.BSModalBody>
+    <BlazorStrap.BSModalFooter>
+        <div class="col-3 my-auto">
+            <strong>@Detalhe.Preco.ToString("C2")</strong>
+        </div>
+        <div class="col text-right my-auto d-block" style="white-space: nowrap;">
+            <label for="inputQtd">Quantidades</label>
+            <input name="inputQtd" type="number" min="1" @bind-value="Quantidade" style="width: 50px;" />
+            <BlazorStrap.BSButton Color="BlazorStrap.Color.Primary" OnClick="@AdicionarAoCarrinho">Adicionar ao carrinho</BlazorStrap.BSButton>
+        </div>
+    </BlazorStrap.BSModalFooter>
+</BSModal>
+
+
+@code {
+    private Models.Produto[] Produtos;
+    private Models.Produto Detalhe = new Produto();
+
+    BlazorStrap.BSModal DetalheProduto;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var response = await HttpClient.GetFromJsonAsync<ProdutoIEnumerableResposta>($"{Configuration["BaseUrl"]}/produtos");
+        Produtos = response.Data.OrderBy(p => p.Preco).Take(12).ToArray();
+    }
+
+
+    void FecharModal()
+    {
+        Quantidade = 1;
+        DetalheProduto.Style = "";
+        DetalheProduto.Hide();
+    }
+
+    void AbrirModal()
+    {
+        DetalheProduto.Style = "display: block; opacity: 1";
+        DetalheProduto.Show();
+    }
+
+    void DetalharProduto(Produto produto)
+    {
+        Detalhe = produto;
+        AbrirModal();
+    }
+
+    int Quantidade = 1;
+
+    public async Task AdicionarAoCarrinho()
+    {
+        await CartService.AdicionarItem(new ItemDeCompra
+        {
+            Produto = Detalhe,
+            Quantidade = Quantidade
+        });
+        Quantidade = 1;
+        FecharModal();
+    }
+
+}
+
+
+
+
+

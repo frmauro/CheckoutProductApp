@@ -1,0 +1,41 @@
+﻿@inject NavigationManager NavManager
+
+<div class="top-row px-4">
+    <div class="col-lg-3 text-right">
+        <NavLink href="/" >
+            <h5>Shop Quark</h5>
+        </NavLink>
+    </div>
+    <div class="col-lg-6">
+        <div class="input-group">
+            <input type="text" class="form-control" placeholder="Pesquisar produtos" id="input-search" @bind-value="SearchContent" @onkeyup="@SearchOnEnter" />
+            <button type="button" id="nav-search-btn" @onclick="@Search"><i class="oi oi-magnifying-glass"></i></button>
+        </div>
+    </div>
+    <div class="col-lg-3 text-white">
+        <CartLink />
+        <PersonLink />
+    </div>
+
+</div>
+
+@code {
+    private string SearchContent = "";
+
+    private void SearchOnEnter(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            Search();
+        }
+    }
+
+    private void Search()
+    {
+        if (!string.IsNullOrWhiteSpace(SearchContent))
+        {
+            string url = $"/search?term={SearchContent}";
+            NavManager.NavigateTo(url);
+        }
+    }
+}

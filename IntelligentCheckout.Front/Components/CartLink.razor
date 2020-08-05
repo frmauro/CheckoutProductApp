@@ -1,0 +1,39 @@
+﻿@inject HttpClient HttpClient
+@inject CartService CartService
+@implements IDisposable
+
+<NavLink href="/cart">
+    <i class="oi oi-cart"></i><span class="ml-2">@Carrinho.QuantidadeDeItens @(Carrinho.QuantidadeDeItens == 1 ? "item" : "itens")</span>
+</NavLink>
+
+@code {
+
+    private Carrinho Carrinho = new Carrinho();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await AtualizarCarrinho();
+    }
+
+    async Task AtualizarCarrinho()
+    {
+        Carrinho = await CartService.GetCarrinhos();
+        StateHasChanged();
+    }
+
+    void CartChanged()
+    {
+        AtualizarCarrinho();
+    }
+
+
+    protected override void OnInitialized()
+    {
+        CartService.OnChange += CartChanged;
+    }
+
+    public void Dispose()
+    {
+        CartService.OnChange -= CartChanged;
+    }
+}

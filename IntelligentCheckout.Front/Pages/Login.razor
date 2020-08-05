@@ -1,0 +1,105 @@
+﻿@page "/login"
+@inject PessoaService PessoaService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime IJSRuntime
+@inject HttpClient HttpClient
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
+
+<h3>Login</h3>
+<br />
+<br />
+<h4>Foto para login</h4>
+<div class="row">
+    <div class="col-12 text-center"><img src="@Picture" width="640" height="480" style="background: #666;" /></div>
+</div>
+<div class="row  mt-2">
+    <div class="col-12 my-auto text-center" style="white-space: nowrap">
+        <button type="button" @onclick="@(async () => await GetPic())" class="btn btn-secondary" >Obter Foto</button>
+        <button type="button" @onclick="@(async () => await EfetuarLogin())" class="btn btn-primary" >Login</button>
+    </div>
+</div>
+<hr />
+<center>
+    <button type="button" class="btn btn-outline-primary" @onclick="@NavCadastrar"></button>
+</center>
+
+<BSModal @ref="ObterFoto" IsCentered="true" >
+    <BSModalHeader OnClick="@(async () => await FecharModal())">Capturar Imagem</BSModalHeader>
+    <BSModalBody>
+        <video id="video" width="640" height="488" autoplay style="width:100%;"></video>
+    </BSModalBody>
+    <BSModalFooter>
+        <div class="col text-right my-auto d-block" style="white-space: nowrap">
+            <BSButton Color="Color.Light" OnClick="@(async () => await FecharModal())">Cancelar</BSButton>
+            <BSButton Color="Color.Primary" OnClick="@SnapPic">Capturar</BSButton>
+        </div>
+    </BSModalFooter>
+</BSModal>
+
+    @code {
+        string Picture = null;
+
+        BSModal ObterFoto;
+
+        bool LoginDisabled()
+        {
+            return string.IsNullOrWhiteSpace(Picture);
+        }
+
+        protected override void OnInitialized()
+        {
+            if (PessoaService.ObterPessoaAtual() != null)
+            {
+                NavigationManager.NavigateTo("/");
+            }
+            base.OnInitialized();
+        }
+
+        void NavCadastrar()
+        {
+            NavigationManager.NavigateTo("/create-person");
+        }
+
+        async Task FecharModal()
+        {
+            await IJSRuntime.InvokeVoidAsync("stopPicture");
+            ObterFoto.Style = "";
+            ObterFoto.Hide();
+        }
+
+
+        async Task AbrirModal()
+        {
+            await IJSRuntime.InvokeVoidAsync("initPicture");
+            ObterFoto.Style = "display: block; opacity: 1;";
+            ObterFoto.Show();
+            await IJSRuntime.InvokeVoidAsync("startPicture");
+        }
+
+        async Task GetPic()
+        {
+            await AbrirModal();
+        }
+
+        async Task SnapPic()
+        {
+            await IJSRuntime.InvokeVoidAsync("snapPicture");
+            var result = await IJSRuntime.InvokeAsync<string>("exportPicture");
+            await IJSRuntime.InvokeVoidAsync("stopPicture");
+            Picture = result;
+            await FecharModal();
+        }
+
+        async Task EfetuarLogin()
+        {
+            string url = $"{Configuration["BaseUrl"]}/api/pessoas/obter-pelo-rosto";
+            Models.ObterPessoaPeloRosto data = new ObterPessoaPeloRosto() { FotoDoRostoEmBase64 = Picture };
+            var resposta = await HttpClient.PostAsJsonAsync(url, data);
+            if (resposta != null && resposta.Content != null)
+            {
+                PessoaService.AtualizarPessoa(System.Text.Json.JsonSerializer.Deserialize<PessoaLogin>(await resposta.Content.ReadAsStringAsync()));
+                NavigationManager.NavigateTo("/");
+            }
+        }
+
+    }
